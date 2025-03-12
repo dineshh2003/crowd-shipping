@@ -1,0 +1,91 @@
+import React, { useEffect, useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import AuthNavigator from './AuthNavigator';
+import DashboardNavigator from './DashboardNavigator';
+import WelcomeScreen from '../screens/onboarding/WelcomeScreen';
+import { useAuth } from '../hooks/useAuth';
+
+// Define the stack param list types
+export type RootStackParamList = {
+  Welcome: { onComplete: () => void };
+  Dashboard: undefined;
+  Auth: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Loading screen component
+function LoadingScreen() {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#4A80F0" />
+    </View>
+  );
+}
+
+export default function AppNavigator() {
+  const { user, isLoading } = useAuth();
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Check if user has completed onboarding
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const value = await AsyncStorage.getItem('hasCompletedOnboarding');
+        setHasCompletedOnboarding(value === 'true');
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, []);
+
+  // Handle onboarding completion
+  const handleOnboardingComplete = async () => {
+    try {
+      await AsyncStorage.setItem('hasCompletedOnboarding', 'true');
+      setHasCompletedOnboarding(true);
+    } catch (error) {
+      console.error('Error saving onboarding status:', error);
+    }
+  };
+
+  // Show loading screen while initializing
+  if (isInitializing || isLoading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!hasCompletedOnboarding ? (
+          <Stack.Screen 
+            name="Welcome" 
+            component={WelcomeScreen} 
+            initialParams={{ onComplete: handleOnboardingComplete }}
+          />
+        ) : user ? (
+          <Stack.Screen name="Dashboard" component={DashboardNavigator} />
+        ) : (
+          <Stack.Screen name="Auth" component={AuthNavigator} />
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f7fa',
+  },
+});
