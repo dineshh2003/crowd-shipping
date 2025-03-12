@@ -35,9 +35,6 @@ export default function LoginScreen() {
     const success = await login(email, password, userType);
     setIsLoading(false);
 
-    if (!success) {
-      // Login failed - error is handled in the login function
-    }
   };
 
   return (

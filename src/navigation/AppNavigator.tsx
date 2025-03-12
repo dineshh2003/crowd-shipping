@@ -2,19 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
 import AuthNavigator from './AuthNavigator';
 import DashboardNavigator from './DashboardNavigator';
+import DeliveryPartnerDashboardScreen from '../screens/delivery-partner/delivery-partner-dashboard-screen';
 import WelcomeScreen from '../screens/onboarding/WelcomeScreen';
 import { useAuth } from '../hooks/useAuth';
+import { RootStackParamList } from '../types/navigation';
 
-// Define the stack param list types
-export type RootStackParamList = {
-  Welcome: { onComplete: () => void };
-  Dashboard: undefined;
-  Auth: undefined;
-};
-
+// Create the stack navigator with the correct type
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // Loading screen component
@@ -62,6 +58,9 @@ export default function AppNavigator() {
     return <LoadingScreen />;
   }
 
+  // For debugging
+  console.log('Current user type:', user?.userType);
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -72,7 +71,13 @@ export default function AppNavigator() {
             initialParams={{ onComplete: handleOnboardingComplete }}
           />
         ) : user ? (
-          <Stack.Screen name="Dashboard" component={DashboardNavigator} />
+          user.userType === 'partner' ? (
+            // Delivery partner sees their dedicated dashboard
+            <Stack.Screen name="DeliveryPartnerDashboard" component={DeliveryPartnerDashboardScreen} />
+          ) : (
+            // Regular users see the user dashboard
+            <Stack.Screen name="Dashboard" component={DashboardNavigator} />
+          )
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         )}

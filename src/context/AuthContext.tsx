@@ -1,43 +1,32 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
 
-// Define user types
+// Define UserType as a string literal type
 export type UserType = 'user' | 'partner';
 
-export interface User {
+// Define User type
+export type User = {
   id: string;
   name: string;
   email: string;
   userType: UserType;
-}
+};
 
-interface AuthContextType {
+type AuthContextType = {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string, userType: UserType) => Promise<boolean>;
-  register: (name: string, email: string, password: string, userType: UserType) => Promise<boolean>;
+  login: (email: string, password: string, userType: UserType) => Promise<void>;
+  register: (name: string, email: string, password: string, userType: UserType) => Promise<void>;
   logout: () => Promise<void>;
-}
+};
 
-// Create the context with a default value
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isLoading: true,
-  login: async () => false,
-  register: async () => false,
-  logout: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Custom hook to use the auth context
-export const useAuth = () => useContext(AuthContext);
-
-// Auth provider component
-export default function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is logged in on app start
+  // Check if user is already logged in
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -55,84 +44,68 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     loadUser();
   }, []);
 
-  // Login function
-  const login = async (email: string, password: string, userType: UserType): Promise<boolean> => {
+  const login = async (email: string, password: string, userType: UserType) => {
     try {
       setIsLoading(true);
       
       // In a real app, you would validate credentials with your backend
-      // For demo purposes, we'll just simulate a successful login
-      if (email && password) {
-        // Mock user data
-        const userData: User = {
-          id: Math.random().toString(36).substring(7),
-          name: email.split('@')[0], // Use part of email as name
-          email,
-          userType,
-        };
-        
-        // Save user to storage
-        await AsyncStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
-        return true;
-      }
+      // For demo purposes, we'll just create a mock user
+      const mockUser: User = {
+        id: Math.random().toString(36).substring(7),
+        name: email.split('@')[0], // Use part of email as name
+        email,
+        userType,
+      };
       
-      Alert.alert('Login Failed', 'Invalid email or password');
-      return false;
+      // Save user to storage
+      await AsyncStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(mockUser);
+      
+      console.log(`Logged in as ${userType} with email: ${email}`);
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Login Failed', 'An error occurred during login');
-      return false;
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Register function
-  const register = async (
-    name: string, 
-    email: string, 
-    password: string, 
-    userType: UserType
-  ): Promise<boolean> => {
+  const register = async (name: string, email: string, password: string, userType: UserType) => {
     try {
       setIsLoading(true);
       
       // In a real app, you would register with your backend
-      // For demo purposes, we'll just simulate a successful registration
-      if (name && email && password) {
-        // Mock user data
-        const userData: User = {
-          id: Math.random().toString(36).substring(7),
-          name,
-          email,
-          userType,
-        };
-        
-        // Save user to storage
-        await AsyncStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
-        return true;
-      }
+      // For demo purposes, we'll just create a mock user
+      const mockUser: User = {
+        id: Math.random().toString(36).substring(7),
+        name,
+        email,
+        userType,
+      };
       
-      Alert.alert('Registration Failed', 'Please fill in all fields');
-      return false;
+      // Save user to storage
+      await AsyncStorage.setItem('user', JSON.stringify(mockUser));
+      setUser(mockUser);
+      
+      console.log(`Registered as ${userType} with email: ${email}`);
     } catch (error) {
       console.error('Registration error:', error);
-      Alert.alert('Registration Failed', 'An error occurred during registration');
-      return false;
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Logout function
-  const logout = async (): Promise<void> => {
+  const logout = async () => {
     try {
+      setIsLoading(true);
       await AsyncStorage.removeItem('user');
       setUser(null);
     } catch (error) {
       console.error('Logout error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -141,4 +114,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       {children}
     </AuthContext.Provider>
   );
-}
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
